@@ -1,0 +1,14 @@
+# use docker compose up -d to start the container
+
+version: '3.8'
+
+services:
+  solid-concepts-pg:
+    image: bitnami/postgresql:latest
+    container_name: ukwali-pg
+    environment:
+      - POSTGRESQL_USERNAME=ukwali
+      - POSTGRESQL_PASSWORD=ukwali
+      - POSTGRESQL_DATABASE=ukwali
+    ports:
+      - 5432:5432
