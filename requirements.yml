@@ -1,0 +1,100 @@
+functional_requirements:
+  user:
+    - Criar conta como cliente ou barbeiro
+    - Fazer login/logout
+    - Visualizar perfil
+    - Editar informações pessoais
+    - Visualizar histórico de agendamentos
+    - Avaliar serviços realizados
+    - Receber notificações de agendamentos
+
+  client:
+    - Buscar estabelecimentos próximos
+    - Visualizar perfil dos barbeiros
+    - Ver disponibilidade de horários
+    - Agendar serviços de acordo o barbeiro
+    - Cancelar agendamentos
+    - Favoritar estabelecimentos e barbeiros
+    - Comentar serviços realizados por barbeiros
+    - Avaliar serviços realizados por barbeiros
+    - Ver avaliações e comentários
+    - Dar like ou dislike em comentários
+    - Fazer pagamentos online
+    - Verificar se o barbeiro está disponível
+
+  barber:
+    - Vincular-se a um estabelecimento
+    - Gerenciar agenda
+    - Ver histórico de clientes
+    - Confirmar agendamentos
+    - Definir horários de trabalho
+    - Ver avaliações recebidas
+    - Responder aos comentários
+    - Meter like ou dislike em comentários
+
+  establishment:
+    - Cadastrar estabelecimento
+    - Gerenciar lista de serviços
+    - Gerenciar equipe de barbeiros
+    - Ver relatórios de desempenho
+    - Configurar horário de funcionamento
+    - Gerenciar preços dos serviços
+
+business_rules:
+  establishment:
+    - Um estabelecimento deve ter pelo menos um barbeiro associado
+    - Um estabelecimento deve ter um administrador
+    - Um estabelecimento deve ter uma lista de serviços oferecidos
+    - O estabelecimento define os preços dos serviços
+    - Horário de funcionamento deve ser claramente definido
+    - Deve ter endereço e contato válidos
+
+  barber:
+    - Um barbeiro deve estar associado a apenas um estabelecimento por vez
+    - Barbeiro deve definir sua disponibilidade dentro do horário do estabelecimento
+    - Barbeiro pode realizar apenas serviços oferecidos pelo estabelecimento
+    - Deve manter agenda atualizada
+
+
+  scheduling:
+    - Agendamentos devem respeitar o horário de funcionamento
+    - Cancelamentos devem ser feitos com antecedência mínima de 30 minutos
+    - Um horário só pode ser reservado para um cliente por vez
+    - Deve haver intervalo mínimo entre agendamentos
+    - Cliente deve confirmar presença com antecedência
+
+  payment:
+    - Pagamento pode ser realizado no app ou presencialmente
+    - Sistema deve calcular comissão do barbeiro
+    - Política de cancelamento deve ser clara
+    - Preços devem ser atualizados em tempo real
+
+non_functional_requirements:
+  performance:
+    - Tempo de resposta máximo de 2 segundos
+    - Suportar 1000 usuários simultâneos
+    - Disponibilidade de 99.9%
+    - Backup diário dos dados
+
+  security:
+    - Autenticação em duas etapas
+    - Criptografia de dados sensíveis
+    - Conformidade com LGPD
+    - Tokens de acesso com expiração
+    - Registro de todas as transações
+
+  usability:
+    - Interface intuitiva e responsiva
+    - Suporte a múltiplos idiomas
+    - Modo escuro/claro
+    - Acessibilidade WCAG 2.1
+    - Tutorial para primeiro uso
+
+  technical:
+    - Compatível com iOS 13+ e Android 8+
+    - Integração com sistemas de pagamento
+    - API RESTful
+    - Cache de dados offline
+    - Notificações push
+    - Integração com mapas 
+    
