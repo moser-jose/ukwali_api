@@ -1,0 +1,380 @@
+openapi: 3.0.0
+info:
+  title: Barber Shop API
+  description: API para aplicativo mobile de barbearias
+  version: 1.0.0
+
+servers:
+  - url: http://api.barbershop.com/v1
+    description: Production server
+  - url: http://staging-api.barbershop.com/v1
+    description: Staging server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        type:
+          type: string
+          enum: [client, barber, admin]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Establishment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        openingHours:
+          type: object
+          properties:
+            monday:
+              type: string
+            tuesday:
+              type: string
+            wednesday:
+              type: string
+            thursday:
+              type: string
+            friday:
+              type: string
+            saturday:
+              type: string
+            sunday:
+              type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+        barbers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Barber'
+
+    Barber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        establishmentId:
+          type: string
+          format: uuid
+        availability:
+          type: array
+          items:
+            type: object
+            properties:
+              dayOfWeek:
+                type: string
+              startTime:
+                type: string
+              endTime:
+                type: string
+        rating:
+          type: number
+          format: float
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        duration:
+          type: integer
+          description: Duração em minutos
+        establishmentId:
+          type: string
+          format: uuid
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        barberId:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        dateTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, confirmed, completed, cancelled]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, refunded]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        barberId:
+          type: string
+          format: uuid
+        appointmentId:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+paths:
+  /auth:
+    post:
+      summary: Autenticação de usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token JWT gerado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /users:
+    post:
+      summary: Criar novo usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /establishments:
+    get:
+      summary: Listar estabelecimentos
+      parameters:
+        - in: query
+          name: latitude
+          schema:
+            type: number
+        - in: query
+          name: longitude
+          schema:
+            type: number
+        - in: query
+          name: radius
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Lista de estabelecimentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Establishment'
+
+    post:
+      summary: Criar estabelecimento
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Establishment'
+      responses:
+        '201':
+          description: Estabelecimento criado com sucesso
+
+  /establishments/{id}/services:
+    get:
+      summary: Listar serviços do estabelecimento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de serviços
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+
+  /appointments:
+    post:
+      summary: Criar agendamento
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      responses:
+        '201':
+          description: Agendamento criado com sucesso
+
+    get:
+      summary: Listar agendamentos
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: clientId
+          schema:
+            type: string
+        - in: query
+          name: barberId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de agendamentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+
+  /appointments/{id}:
+    patch:
+      summary: Atualizar status do agendamento
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, completed, cancelled]
+      responses:
+        '200':
+          description: Status atualizado com sucesso
+
+  /reviews:
+    post:
+      summary: Criar avaliação
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '201':
+          description: Avaliação criada com sucesso
+
+    get:
+      summary: Listar avaliações
+      parameters:
+        - in: query
+          name: barberId
+          schema:
+            type: string
+        - in: query
+          name: establishmentId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de avaliações
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review' 

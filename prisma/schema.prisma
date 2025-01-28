@@ -59,9 +59,9 @@ enum ReactionType {
 model User {
   id            String    @id @default(uuid())
   name          String    @db.VarChar(100)
-  email         String    @unique @db.VarChar(255)
+  email         String    @unique @db.VarChar(180)
   password_hash String
-  phone         String?   @db.VarChar(20)
+  phone         String?   @unique @db.VarChar(20)
   role          UserRole  @default(CLIENT)
   avatar_url    String?   @db.Text
   is_active     Boolean   @default(true)
@@ -70,30 +70,23 @@ model User {
   updated_at    DateTime  @updatedAt
 
   // Relations
-  appointments_as_client    Appointment[]    @relation("ClientAppointments")
-  appointments_as_barber    Appointment[]    @relation("BarberAppointments")
-  reviews_given            Review[]         @relation("ReviewsGiven")
-  reviews_received         Review[]         @relation("ReviewsReceived")
-  comments                 Comment[]
-  comment_reactions        CommentReaction[]
-  favorite_establishments  Establishment[]   @relation("UserFavorites")
-  favorite_barbers        User[]           @relation("BarberFavorites")
-  favorited_by            User[]           @relation("BarberFavorites")
+  appointments_as_client    Appointment[]    @relation("ClientAppointments",)
   notifications           Notification[]
-  barber_profile          BarberProfile?
+  barber          Barber?
 
   @@index([email])
   @@index([phone])
   @@map("users")
 }
 
-model BarberProfile {
+model Barber {
   id                String        @id @default(uuid())
   user_id           String        @unique
   establishment_id  String?
   bio              String?       @db.Text
   years_experience Int?
   specialties      String[]
+  social_media    Json      // Store name and url of social media links
   work_schedule    Json?         // Store working hours for each day
   is_available     Boolean       @default(true)
   rating_average   Float?        @db.Real
@@ -104,15 +97,19 @@ model BarberProfile {
   // Relations
   user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   establishment   Establishment? @relation(fields: [establishment_id], references: [id])
-
+  comments                 Comment[]        @relation("ClientComments")
+  comment_reactions        CommentReaction[]
+  
   @@index([establishment_id])
-  @@map("barber_profiles")
+  @@map("barbers")
 }
 
 model Establishment {
   id              String    @id @default(uuid())
   name            String    @db.VarChar(100)
   description     String?   @db.Text
+  image_url       String?   @db.Text
+  social_media    Json      // Store name and url of social media links
   address         String
   phone           String    @db.VarChar(20)
   email           String    @unique @db.VarChar(255)
@@ -126,7 +123,7 @@ model Establishment {
   longitude       Decimal   @db.Decimal(11, 8)
 
   // Relations
-  barbers         BarberProfile[]
+  barbers         Barber[]
   services        Service[]
   appointments    Appointment[]
   favorited_by    User[]         @relation("UserFavorites")
@@ -176,8 +173,7 @@ model Appointment {
   barber          User          @relation("BarberAppointments", fields: [barber_id], references: [id])
   service         Service       @relation(fields: [service_id], references: [id])
   establishment   Establishment @relation(fields: [establishment_id], references: [id])
-  review          Review?
-
+  
   @@index([date_time])
   @@index([client_id])
   @@index([barber_id])
@@ -188,22 +184,17 @@ model Appointment {
 model Review {
   id              String    @id @default(uuid())
   rating          Int       @db.SmallInt
-  comment         String?   @db.Text
-  appointment_id  String    @unique
   client_id       String
-  barber_id       String
-  establishment_id String
-  is_public       Boolean   @default(true)
+  barber_id       String?
+  establishment_id String?
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
   // Relations
-  appointment     Appointment   @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   client          User          @relation("ReviewsGiven", fields: [client_id], references: [id])
-  barber          User          @relation("ReviewsReceived", fields: [barber_id], references: [id])
-  establishment   Establishment @relation(fields: [establishment_id], references: [id])
-  comments        Comment[]
-
+  barber          Barber?          @relation("ReviewsReceived", fields: [barber_id], references: [id])
+  establishment   Establishment? @relation(fields: [establishment_id], references: [id])
+  
   @@index([client_id])
   @@index([barber_id])
   @@index([rating])
@@ -213,20 +204,23 @@ model Review {
 model Comment {
   id          String    @id @default(uuid())
   content     String    @db.Text
-  review_id   String
-  user_id     String
+  client_id   String
+  barber_id   String?    // Optional - only for barber comments
+  establishment_id String?  // Optional - only for establishment comments
   is_edited   Boolean   @default(false)
   is_public   Boolean   @default(true)
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
 
   // Relations
-  review      Review           @relation(fields: [review_id], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [user_id], references: [id])
-  reactions   CommentReaction[]
+  client        User             @relation("ClientComments", fields: [client_id], references: [id])
+  barber        User?            @relation("BarberComments", fields: [barber_id], references: [id])
+  establishment Establishment?   @relation(fields: [establishment_id], references: [id])
+  reactions     CommentReaction[]
 
-  @@index([review_id])
-  @@index([user_id])
+  @@index([client_id])
+  @@index([barber_id])
+  @@index([establishment_id])
   @@map("comments")
 }
 
