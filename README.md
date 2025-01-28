@@ -6,7 +6,7 @@ RESTful API for managing barbershops, appointments, and services.
 
 - Node.js
 - TypeScript
-- Express
+- Fastify
 - Prisma (ORM)
 - PostgreSQL
 - JWT for authentication
