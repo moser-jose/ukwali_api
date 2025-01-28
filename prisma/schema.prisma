@@ -12,3 +12,258 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  CLIENT
+  BARBER
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PAYPAL
+  CASH
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  APPOINTMENT_CONFIRMATION
+  APPOINTMENT_CANCELLATION
+  NEW_REVIEW
+  NEW_COMMENT
+  PAYMENT_CONFIRMATION
+  GENERAL
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String    @db.VarChar(100)
+  email         String    @unique @db.VarChar(255)
+  password_hash String
+  phone         String?   @db.VarChar(20)
+  role          UserRole  @default(CLIENT)
+  avatar_url    String?   @db.Text
+  is_active     Boolean   @default(true)
+  last_login    DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  // Relations
+  appointments_as_client    Appointment[]    @relation("ClientAppointments")
+  appointments_as_barber    Appointment[]    @relation("BarberAppointments")
+  reviews_given            Review[]         @relation("ReviewsGiven")
+  reviews_received         Review[]         @relation("ReviewsReceived")
+  comments                 Comment[]
+  comment_reactions        CommentReaction[]
+  favorite_establishments  Establishment[]   @relation("UserFavorites")
+  favorite_barbers        User[]           @relation("BarberFavorites")
+  favorited_by            User[]           @relation("BarberFavorites")
+  notifications           Notification[]
+  barber_profile          BarberProfile?
+
+  @@index([email])
+  @@index([phone])
+  @@map("users")
+}
+
+model BarberProfile {
+  id                String        @id @default(uuid())
+  user_id           String        @unique
+  establishment_id  String?
+  bio              String?       @db.Text
+  years_experience Int?
+  specialties      String[]
+  work_schedule    Json?         // Store working hours for each day
+  is_available     Boolean       @default(true)
+  rating_average   Float?        @db.Real
+  total_reviews    Int          @default(0)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  establishment   Establishment? @relation(fields: [establishment_id], references: [id])
+
+  @@index([establishment_id])
+  @@map("barber_profiles")
+}
+
+model Establishment {
+  id              String    @id @default(uuid())
+  name            String    @db.VarChar(100)
+  description     String?   @db.Text
+  address         String
+  phone           String    @db.VarChar(20)
+  email           String    @unique @db.VarChar(255)
+  opening_hours   Json      // Store opening hours for each day
+  rating_average  Float?    @db.Real
+  total_reviews   Int       @default(0)
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  latitude        Decimal   @db.Decimal(10, 8)
+  longitude       Decimal   @db.Decimal(11, 8)
+
+  // Relations
+  barbers         BarberProfile[]
+  services        Service[]
+  appointments    Appointment[]
+  favorited_by    User[]         @relation("UserFavorites")
+  reviews         Review[]
+
+  @@index([latitude, longitude])
+  @@index([name])
+  @@map("establishments")
+}
+
+model Service {
+  id                String    @id @default(uuid())
+  name              String    @db.VarChar(100)
+  description       String?   @db.Text
+  price             Decimal   @db.Decimal(10, 2)
+  duration_minutes  Int
+  establishment_id  String
+  is_active         Boolean   @default(true)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  // Relations
+  establishment     Establishment @relation(fields: [establishment_id], references: [id], onDelete: Cascade)
+  appointments      Appointment[]
+
+  @@index([establishment_id])
+  @@map("services")
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  date_time       DateTime
+  status          AppointmentStatus @default(PENDING)
+  client_id       String
+  barber_id       String
+  service_id      String
+  establishment_id String
+  payment_status  PaymentStatus     @default(PENDING)
+  payment_method  PaymentMethod?
+  cancellation_reason String?       @db.Text
+  notes           String?           @db.Text
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+
+  // Relations
+  client          User          @relation("ClientAppointments", fields: [client_id], references: [id])
+  barber          User          @relation("BarberAppointments", fields: [barber_id], references: [id])
+  service         Service       @relation(fields: [service_id], references: [id])
+  establishment   Establishment @relation(fields: [establishment_id], references: [id])
+  review          Review?
+
+  @@index([date_time])
+  @@index([client_id])
+  @@index([barber_id])
+  @@index([status])
+  @@map("appointments")
+}
+
+model Review {
+  id              String    @id @default(uuid())
+  rating          Int       @db.SmallInt
+  comment         String?   @db.Text
+  appointment_id  String    @unique
+  client_id       String
+  barber_id       String
+  establishment_id String
+  is_public       Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  // Relations
+  appointment     Appointment   @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  client          User          @relation("ReviewsGiven", fields: [client_id], references: [id])
+  barber          User          @relation("ReviewsReceived", fields: [barber_id], references: [id])
+  establishment   Establishment @relation(fields: [establishment_id], references: [id])
+  comments        Comment[]
+
+  @@index([client_id])
+  @@index([barber_id])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+  content     String    @db.Text
+  review_id   String
+  user_id     String
+  is_edited   Boolean   @default(false)
+  is_public   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  // Relations
+  review      Review           @relation(fields: [review_id], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [user_id], references: [id])
+  reactions   CommentReaction[]
+
+  @@index([review_id])
+  @@index([user_id])
+  @@map("comments")
+}
+
+model CommentReaction {
+  id          String        @id @default(uuid())
+  type        ReactionType
+  comment_id  String
+  user_id     String
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  // Relations
+  comment     Comment       @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [user_id], references: [id])
+
+  @@unique([comment_id, user_id])
+  @@index([comment_id])
+  @@index([user_id])
+  @@map("comment_reactions")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  type        NotificationType
+  title       String          @db.VarChar(255)
+  content     String          @db.Text
+  user_id     String
+  read        Boolean         @default(false)
+  read_at     DateTime?
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+
+  // Relations
+  user        User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([type])
+  @@index([read])
+  @@map("notifications")
+}
